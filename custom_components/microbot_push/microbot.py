@@ -74,7 +74,7 @@ class MicroBotPush:
             return self.bdaddr
     # end of class
 
-    def __init__(self, bdaddr, config, newproto, is_server, socket_path, depth, duration, mode):
+    def __init__(self, bdaddr, config, socket_path, depth, duration, mode, newproto=True, is_server=False):
         self.bdaddr = bdaddr
         self.retry = 5
         self.token = None
@@ -83,15 +83,15 @@ class MicroBotPush:
         self.config = expanduser(config)
         self.__loadToken()
         self.newproto = newproto
-        self.setMode(mode)
+        self.depth = 50
+        self.duration = 0
+        self.mode = 0
         self.is_server = is_server
         self.socket = None
         self.socket_path = "/config/microbot-"+re.sub('[^a-f0-9]', '', bdaddr.lower()) 
-        self.depth = depth
-        self.duration = duration
 
     def connect(self, init=False):
-        if self.is_server == 'client':
+        if self.is_server == False:
             self.socket = self.__connectToServer()
             if self.socket:
                 return
@@ -129,7 +129,7 @@ class MicroBotPush:
             return None
 
     def runServer(self):
-        if self.is_server == 'client':
+        if self.is_server == False:
             return
 
         print("server mode")
@@ -172,7 +172,7 @@ class MicroBotPush:
             self.disconnect()
 
     def disconnect(self):
-        if self.is_server == 'client':
+        if self.is_server == False:
             if self.socket:
                 self.socket.close()
                 return
@@ -332,7 +332,7 @@ class MicroBotPush:
         return param['result']
 
     def push(self, setparams):
-        if self.is_server == 'client':
+        if self.is_server == False:
             if self.socket:
                 res = self.__push_server(setparams)
                 return res
