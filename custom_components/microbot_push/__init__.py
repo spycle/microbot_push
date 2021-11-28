@@ -23,24 +23,6 @@ def setup(hass, config):
 
     conf_dir = hass.config.path()
     conf = conf_dir+'/microbot.conf'
-
-    def stop_server(call):
-
-        cp = configparser.ConfigParser()
-        cp.read(conf)
-        if not cp.has_section('tokens'):
-            _LOGGER.warning('cannot start server as no token')
-            return
-        else:
-            raw = cp.options('tokens')
-            string = raw[0]
-            string = string.upper()
-            bdaddr = ':'.join([string[i : i + 2] for i in range(0, len(string), 2)])
-
-        socket_path = conf_dir+"/microbot-"+re.sub('[^a-f0-9]', '', bdaddr.lower())
-        
-        mbps = MicroBotPush(bdaddr, conf, 'newproto', 'client', socket_path, 50, 0, 'normal')
-        mbps.disconnect()
     
     def start_server(call):
 
@@ -57,7 +39,7 @@ def setup(hass, config):
 
         socket_path = conf_dir+"/microbot-"+re.sub('[^a-f0-9]', '', bdaddr.lower())
         
-        mbps = MicroBotPush(bdaddr, conf, 'newproto', 'server', socket_path, 50, 0, 'normal')
+        mbps = MicroBotPush(bdaddr, conf, socket_path, 50, 0, 'normal', newproto=True, is_server=True)
         mbps.connect()
         mbps.disconnect()
         mbps.runServer()
@@ -69,7 +51,7 @@ def setup(hass, config):
         
         ble = data["bdaddr"]
         
-        mbpt = MicroBotPush(ble, conf, 'newproto', 'is_server', 'socket_path', 50, 0, 'normal')
+        mbpt = MicroBotPush(ble, conf, 'socket_path', 50, 0, 'normal', newproto=True, is_server=False)
         _LOGGER.info('update token')
         mbpt.connect(init=True)
         mbpt.getToken()
@@ -80,7 +62,6 @@ def setup(hass, config):
 
     hass.services.register(DOMAIN, 'get_token', request_token)
     hass.services.register(DOMAIN, 'start_server', start_server)
-    hass.services.register(DOMAIN, 'stop_server', stop_server)
 #    hass.bus.listen_once(EVENT_HOMEASSISTANT_START, start_server)
  
     return True
