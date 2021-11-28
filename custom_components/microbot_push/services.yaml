@@ -9,5 +9,3 @@ get_token:
         text:
 start_server:
   description: Start Server
-stop_server:
-  description: Stop Server
