@@ -42,16 +42,17 @@ def setup_platform(hass, config, add_entities, discovery_info=None) -> None:
     conf_dir = hass.config.path()
     conf = conf_dir+'/microbot.conf'
     socket_path = conf_dir+"/microbotsnd-"+re.sub('[^a-f0-9]', '', bdaddr.lower())
-    add_entities([MicroBotPushEntity(bdaddr, name, conf, socket_path, depth, duration, mode)], True)
+    device = MicroBotPush(bdaddr, conf, socket_path, depth, duration, mode, newproto=True, is_server=False)
+    add_entities([MicroBotPushEntity(bdaddr, name, conf, socket_path, depth, duration, mode, device)], True)
 
 
 class MicroBotPushEntity(SwitchEntity):
     """Representation of a MicroBot."""
 
-    def __init__(self, bdaddr, name, conf, socket_path, depth, duration, mode) -> None:
+    def __init__(self, bdaddr, name, conf, socket_path, depth, duration, mode, device) -> None:
         """Initialize the MicroBot."""
 
-        self._device = microbot.MicroBotPush(bdaddr, conf, 'newproto', 'client', socket_path, depth, duration, mode)
+        self._device = device
         self._depth = depth
         self._duration = duration
         self._mode = mode
@@ -102,9 +103,3 @@ class MicroBotPushEntity(SwitchEntity):
         self._device.disconnect()
         self._is_on = False
         return True
-
-
-
-
-
-            
