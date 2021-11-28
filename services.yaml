@@ -1,0 +1,13 @@
+get_token:
+  description: Get MicroBot token
+  fields:
+    bdaddr:
+      name: bdaddr
+      description: Bluetooth address
+      required: true
+      selector:
+        text:
+start_server:
+  description: Start Server
+stop_server:
+  description: Stop Server
