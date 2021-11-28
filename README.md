@@ -3,7 +3,7 @@ Home Assistant custom integration switch for controlling a MicroBot Push.
 
 Uses the Linux utility from https://github.com/kahiroka/microbot
 
-NB. This is very much a work in progress and isn't working all that reliably
+NB. This is very much a work in progress and isn't working all that reliably.
 I have no idea if this will work with newer devices sold by Keymitt
 
 ## Example configuration.yaml
