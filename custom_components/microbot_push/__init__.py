@@ -24,6 +24,36 @@ def setup(hass, config):
     conf_dir = hass.config.path()
     conf = conf_dir+'/microbot.conf'
     
+    def set_params(call):
+
+        cp = configparser.ConfigParser()
+        cp.read(conf)
+        if not cp.has_section('tokens'):
+            _LOGGER.warning('no token found')
+            return
+        else:
+            raw = cp.options('tokens')
+            string = raw[0]
+            string = string.upper()
+            bdaddr = ':'.join([string[i : i + 2] for i in range(0, len(string), 2)])
+
+        socket_path = conf_dir+"/microbot-"+re.sub('[^a-f0-9]', '', bdaddr.lower())
+
+        data = call.data.copy()
+        
+        depth = data["depth"]
+        duration = data["duration"]
+        mode = data["mode"]
+        
+        mbpp = MicroBotPush(bdaddr, conf, socket_path, newproto=True, is_server=False)
+        mbpp.connect()
+        mbpp.setDepth(depth)
+        mbpp.setDuration(duration)
+        mbpp.setMode(mode)
+        mbpp.setParams()
+        mbpp.disconnect()
+        return
+
     def start_server(call):
 
         cp = configparser.ConfigParser()
@@ -39,7 +69,7 @@ def setup(hass, config):
 
         socket_path = conf_dir+"/microbot-"+re.sub('[^a-f0-9]', '', bdaddr.lower())
         
-        mbps = MicroBotPush(bdaddr, conf, socket_path, 50, 0, 'normal', newproto=True, is_server=True)
+        mbps = MicroBotPush(bdaddr, conf, socket_path, newproto=True, is_server=True)
         mbps.connect()
         mbps.disconnect()
         mbps.runServer()
@@ -51,7 +81,7 @@ def setup(hass, config):
         
         ble = data["bdaddr"]
         
-        mbpt = MicroBotPush(ble, conf, 'socket_path', 50, 0, 'normal', newproto=True, is_server=False)
+        mbpt = MicroBotPush(ble, conf, 'socket_path', newproto=True, is_server=False)
         _LOGGER.info('update token')
         mbpt.connect(init=True)
         mbpt.getToken()
@@ -62,6 +92,7 @@ def setup(hass, config):
 
     hass.services.register(DOMAIN, 'get_token', request_token)
     hass.services.register(DOMAIN, 'start_server', start_server)
+    hass.services.register(DOMAIN, 'set_params', set_params)
 #    hass.bus.listen_once(EVENT_HOMEASSISTANT_START, start_server)
  
     return True
