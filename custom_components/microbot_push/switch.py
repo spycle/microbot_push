@@ -25,37 +25,28 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Required(CONF_BDADDR): cv.string,
-        vol.Optional(CONF_DEPTH, default=DEFAULT_DEPTH): cv.positive_int,
-        vol.Optional(CONF_DURATION, default=DEFAULT_DURATION): cv.positive_int,
-        vol.Optional(CONF_MODE, default=DEFAULT_MODE): cv.string,
     }
 )
 
 
 def setup_platform(hass, config, add_entities, discovery_info=None) -> None:
     """Perform the setup for MicroBot devices."""
-    depth = config.get(CONF_DEPTH)
-    duration = config.get(CONF_DURATION)
-    mode = config.get(CONF_MODE)
     name = config.get(CONF_NAME)
     bdaddr = config.get(CONF_BDADDR)
     conf_dir = hass.config.path()
     conf = conf_dir+'/microbot.conf'
     socket_path = conf_dir+"/microbotsnd-"+re.sub('[^a-f0-9]', '', bdaddr.lower())
-    device = MicroBotPush(bdaddr, conf, socket_path, depth, duration, mode, newproto=True, is_server=False)
-    add_entities([MicroBotPushEntity(bdaddr, name, conf, socket_path, depth, duration, mode, device)], True)
+    device = MicroBotPush(bdaddr, conf, socket_path, newproto=True, is_server=False)
+    add_entities([MicroBotPushEntity(bdaddr, name, conf, socket_path, device)], True)
 
 
 class MicroBotPushEntity(SwitchEntity):
     """Representation of a MicroBot."""
 
-    def __init__(self, bdaddr, name, conf, socket_path, depth, duration, mode, device) -> None:
+    def __init__(self, bdaddr, name, conf, socket_path, device) -> None:
         """Initialize the MicroBot."""
 
         self._device = device
-        self._depth = depth
-        self._duration = duration
-        self._mode = mode
         self._conf = conf
         self._socket_path = socket_path
         self._bdaddr = bdaddr
@@ -103,3 +94,9 @@ class MicroBotPushEntity(SwitchEntity):
         self._device.disconnect()
         self._is_on = False
         return True
+
+
+
+
+
+            
