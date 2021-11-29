@@ -1,0 +1,5 @@
+{
+  "name": "MicroBot Push",
+  "domains": ["switch"],
+  "render_readme": true,
+}
