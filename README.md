@@ -1,7 +1,7 @@
 # MicroBot Push
 Home Assistant custom integration switch for controlling a MicroBot Push.
 
-Uses the Linux utility from https://github.com/kahiroka/microbot
+Makes use of the Linux utility from https://github.com/kahiroka/microbot
 
 NB. This is very much a work in progress and isn't working all that reliably.
 I have no idea if this will work with newer devices sold by Keymitt
@@ -13,9 +13,29 @@ switch:
   - platform: microbot_push
     name: (optional)
     bdaddr: 'XX:XX:XX:XX:XX:XX' (Bluetooth address)
-    depth: 50
-    duration: 0
-    mode: 'normal', 'invert', or 'toggle'
+```
+
+## Services
+
+Set the depth, duration, and mode (normal|invert|toggle).
+The Push will retain the settings so only needs running once.
+
+NB. when running this service the MicroBot will push to the given depth to aid in calibration, but not for the selected duration. The setting is however stored. I haven't tested the mode setting.
+
+```yaml
+service: microbot_push.set_params
+data:
+  depth: 100
+  duration: 10
+  mode: 'normal'
+```
+  
+Get a token from the Push
+
+```yaml
+service: microbot_push.get_token
+data:
+  bdaddr: XX:XX:XX:XX:XX:XX
 ```
 
 ## Setup
@@ -35,7 +55,8 @@ Use the get_token service from the Developer Tools tab and input the bdaddr befo
 The token is stored in path-to-config-directory/microbot.conf.
 
 ## WIP
-The integration will try to connect each time before attempting to push. The result is a delay of up to 30 seconds before responding....and often timesout and completely fails.
-There is a server mode available which maintains the connection, but the push often fails in my testing. Turn on by using the start_server service in Developer Tools.
+The integration will try to connect each time before attempting to push. The result can be a delay of up to 30 seconds before responding....and will sometimes timeout completely.
+
+There is a server mode available which maintains the connection, but for the moment the push command often errors with an exception. Turn on by using the start_server service in Developer Tools.
 The socket file will be stored in path-to-config-directory/microbot-xxxxxxxxxxxx
 
