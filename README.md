@@ -3,7 +3,7 @@ Home Assistant custom integration switch for controlling a MicroBot Push.
 
 Makes use of the Linux utility from https://github.com/kahiroka/microbot
 
-NB. This is very much a work in progress and isn't working all that reliably.
+NB. This is very much a work in progress and isn't working 100% reliably.
 I have no idea if this will work with newer devices sold by Keymitt
 
 ## Example configuration.yaml
@@ -13,29 +13,6 @@ switch:
   - platform: microbot_push
     name: (optional)
     bdaddr: 'XX:XX:XX:XX:XX:XX' (Bluetooth address)
-```
-
-## Services
-
-Set the depth, duration, and mode (normal|invert|toggle).
-The Push will retain the settings so only needs running once.
-
-NB. when running this service the MicroBot will push to the given depth to aid in calibration, but not for the selected duration. The setting is however stored. I haven't tested the mode setting.
-
-```yaml
-service: microbot_push.set_params
-data:
-  depth: 100
-  duration: 10
-  mode: 'normal'
-```
-  
-Get a token from the Push
-
-```yaml
-service: microbot_push.get_token
-data:
-  bdaddr: XX:XX:XX:XX:XX:XX
 ```
 
 ## Setup
@@ -52,11 +29,43 @@ First reset the MicroBot Push. Turn it off then turn it on. When the LED starts 
 
 Use the get_token service from the Developer Tools tab and input the bdaddr before pressing Call Service. The MicroBot will start cycling through various colours waiting for the button to be pressed. (when pairing with the app the colours were significant in that you had to press when the colour on the device matched the app. I've no idea if this is relevant but for me this was always purple) 
 
-The token is stored in path-to-config-directory/microbot.conf.
+The token is stored in path-to-config-directory/microbot-xxxxxxxxxxxx.conf.
 
-## WIP
-The integration will try to connect each time before attempting to push. The result can be a delay of up to 30 seconds before responding....and will sometimes timeout completely.
+## Services
 
-There is a server mode available which maintains the connection, but for the moment the push command often errors with an exception. Turn on by using the start_server service in Developer Tools.
+Set the depth, duration, and mode (normal|invert|toggle).
+The Push will retain the settings so only needs running once.
+
+NB. when running this service the MicroBot will push to the given depth to aid in calibration, but not necessarily for the selected duration. The setting is however stored. 
+
+```yaml
+service: microbot_push.set_params
+data:
+  bdaddr: 'XX:XX:XX:XX:XX:XX'
+  depth: 100
+  duration: 10
+  mode: 'normal'
+```
+  
+Get a token from the Push
+
+```yaml
+service: microbot_push.get_token
+data:
+  bdaddr: 'XX:XX:XX:XX:XX:XX'
+```
+
+A reconnect is required for each push command. This can result in a long delay of up to 30 seconds in response time. If this is an issue then try the server mode which attempts to maintain connection. Turn on by using the start_server service in Developer Tools.
 The socket file will be stored in path-to-config-directory/microbot-xxxxxxxxxxxx
+
+```yaml
+- alias: Start Microbot Server
+  trigger:
+    - platform: homeassistant
+      event: start
+  action:
+    - service: microbot_push.start_server
+      data:
+        bdaddr: 'XX:XX:XX:XX:XX:XX'
+```
 
