@@ -1,10 +1,9 @@
 # MicroBot Push
-Home Assistant custom integration switch for controlling a MicroBot Push.
+Home Assistant custom switch integration for controlling a Naran/Keymitt MicroBot Push.
 
-Makes use of the Linux utility from https://github.com/kahiroka/microbot
+(Not tested on a Ketmitt supplied device but should still work...)
 
-NB. This is very much a work in progress and isn't working 100% reliably.
-I have no idea if this will work with newer devices sold by Keymitt
+Uses a fork of the Linux utility from https://github.com/kahiroka/microbot
 
 ## Example configuration.yaml
 
@@ -29,11 +28,11 @@ First reset the MicroBot Push. Turn it off then turn it on. When the LED starts 
 
 Use the get_token service from the Developer Tools tab and input the bdaddr before pressing Call Service. The MicroBot will start cycling through various colours waiting for the button to be pressed. (when pairing with the app the colours were significant in that you had to press when the colour on the device matched the app. I've no idea if this is relevant but for me this was always purple) 
 
-The token is stored in path-to-config-directory/microbot-xxxxxxxxxxxx.conf.
+The token is stored as path-to-config-directory/microbot-xxxxxxxxxxxx.conf.
 
 ## Services
 
-Set the depth, duration, and mode (normal|invert|toggle).
+Calibration - set the depth, duration, and switch mode (normal|invert|toggle).
 The Push will retain the settings so only needs running once.
 
 NB. when running this service the MicroBot will push to the given depth to aid in calibration, but not necessarily for the selected duration. The setting is however stored. 
@@ -55,8 +54,9 @@ data:
   bdaddr: 'XX:XX:XX:XX:XX:XX'
 ```
 
-A reconnect is required for each push command. This can result in a long delay of up to 30 seconds in response time. If this is an issue then try the server mode which attempts to maintain connection. Turn on by using the start_server service in Developer Tools.
-The socket file will be stored in path-to-config-directory/microbot-xxxxxxxxxxxx
+Experimental feature; 
+if the bot is not within a few metres of HA, it can take several attempts to connect resulting in a long delay of up to 30 seconds before responding. If this is an issue then try the server mode which attempts to maintain connection. Turn on by using the start_server service in Developer Tools.
+The socket file will be stored as path-to-config-directory/microbot-xxxxxxxxxxxx
 
 ```yaml
 - alias: Start Microbot Server
