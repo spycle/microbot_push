@@ -168,7 +168,10 @@ class MicroBotPush:
                     self.disconnect()
                     sys.exit('exit')
 
+            os.remove(self.socket_path)
             self.disconnect()
+            _LOGGER.error('server disconnected. restart service')
+            break
 
     def disconnect(self):
         if self.is_server == False:
