@@ -14,12 +14,6 @@ _LOGGER = logging.getLogger(__name__)
 
 CONF_BDADDR = "bdaddr"
 DEFAULT_NAME = "MicroBotPush"
-CONF_DEPTH = "depth"
-DEFAULT_DEPTH = 50
-CONF_DURATION = "duration"
-DEFAULT_DURATION = 0
-CONF_MODE = "mode"
-DEFAULT_MODE = "normal"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
@@ -34,8 +28,8 @@ def setup_platform(hass, config, add_entities, discovery_info=None) -> None:
     name = config.get(CONF_NAME)
     bdaddr = config.get(CONF_BDADDR)
     conf_dir = hass.config.path()
-    conf = conf_dir+'/microbot.conf'
-    socket_path = conf_dir+"/microbotsnd-"+re.sub('[^a-f0-9]', '', bdaddr.lower())
+    conf = conf_dir+"/microbot-"+re.sub('[^a-f0-9]', '', bdaddr.lower())+".conf"
+    socket_path = conf_dir+"/microbot-"+re.sub('[^a-f0-9]', '', bdaddr.lower())
     device = MicroBotPush(bdaddr, conf, socket_path, newproto=True, is_server=False)
     add_entities([MicroBotPushEntity(bdaddr, name, conf, socket_path, device)], True)
 
@@ -82,7 +76,7 @@ class MicroBotPushEntity(SwitchEntity):
         """Turn the switch on."""
 
         self._device.connect()
-        self._device.push('setparams')
+        self._device.push('noparams')
         self._device.disconnect()
         self._is_on = True
         return True
@@ -90,13 +84,7 @@ class MicroBotPushEntity(SwitchEntity):
     def turn_off(self) -> None:
         """Turn the switch off."""
         self._device.connect()
-        self._device.push('setparams')
+        self._device.push('noparams')
         self._device.disconnect()
         self._is_on = False
         return True
-
-
-
-
-
-            
