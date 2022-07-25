@@ -39,7 +39,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Set up this integration using UI."""
     if hass.data.get(DOMAIN) is None:
         hass.data.setdefault(DOMAIN, {})
-        _LOGGER.info(STARTUP_MESSAGE)
+        _LOGGER.debug(STARTUP_MESSAGE)
 
     bdaddr = entry.data.get(CONF_BDADDR)
     name = entry.data.get(CONF_NAME)
@@ -63,10 +63,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     @callback
     async def generate_token(call: ServiceCall) -> None:
-        hass.services.async_register(DOMAIN, 'generate_token', generate_token)
+#        hass.services.async_register(DOMAIN, 'Generate Token', generate_token)
+        _LOGGER.debug("Token service called")
         await coordinator.api.connect(init=True)
 
-    hass.services.async_register(DOMAIN, 'generate_token', generate_token)
+    @callback
+    async def calibrate(call: ServiceCall) -> None:
+#        hass.services.async_register(DOMAIN, 'Calibrate', calibrate)
+        _LOGGER.debug("Calibrate service called")
+#        data = call.data.copy()
+        depth = call.data["depth"]
+        duration = call.data["duration"]
+        _LOGGER.debug(depth)
+        mode = call.data["mode"]
+        await coordinator.api.connect()
+        coordinator.api.setDepth(depth)
+        coordinator.api.setDuration(duration)
+        coordinator.api.setMode(mode)
+        await coordinator.api.calibrate()
+        await coordinator.api.disconnect()
+
+    hass.services.async_register(DOMAIN, 'Generate Token', generate_token)
+    hass.services.async_register(DOMAIN, 'Calibrate', calibrate)
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     return True
 
