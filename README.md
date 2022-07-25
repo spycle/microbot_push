@@ -10,7 +10,7 @@ Before installation, reset the MicroBot Push by turning it off and on and waitin
 
 Installation is via HACS and then the Home Assistant Integration page. The bdaddr/mac needs to be formatted XX:XX:XX:XX:XX:XX
 
-Before use a one-time token needs to be generated to complete the pairing process (this will eventuallly be part of the Config Flow). Use the generate_token service from the Developer Tools tab. Press the button on the Push to wake it up (it's very sleepy) and wait for it to connect. The Push will eventually start cycling through 2 to 3 colours waiting for the button to be pressed. (when pairing with the app the colours were significant in that you had to press when the colour on the device matched the app. I've no idea if this is relevant but for me this was always purple) 
+Before first use, a one-time token needs to be generated to complete the pairing process (this will eventuallly be part of the Config Flow). Use the generate_token service from the Developer Tools tab. Press the button on the Push to wake it up (it's very sleepy) and wait for it to connect. The Push will eventually start cycling through 2 to 3 colours waiting for the button to be pressed. (when pairing with the app the colours were significant in that you had to press when the colour on the device matched the app. I've no idea if this is relevant but for me this was always purple) 
 
 The token is stored as path-to-config-directory/.storage/microbot-xxxxxxxxxxxx.conf.
 
@@ -18,11 +18,10 @@ Note: The Push is a very sleepy device so it can take up to a minute to respond.
 
 ## Services
 
-Not implemented yet. It might be possible to use the Keymitt app to calibrate but settings may be lost on reset?
-~~Calibration - set the depth, duration, and switch mode (normal|invert|toggle).~~
-~~The Push will retain the settings so only needs running once.~~
+Calibration - set the depth, duration, and switch mode (normal|invert|toggle).
+The Push will retain the settings so only needs running once.
 
-~~NB. when running this service the MicroBot will push to the given depth to aid in calibration, but not necessarily for the selected duration. The setting is however stored.~~
+NB. when running this service the MicroBot will push to the given depth to aid in calibration, but not necessarily for the selected duration. The setting is however stored locally on the device.
 
 ```yaml
 service: microbot_push.calibrate
@@ -32,7 +31,7 @@ data:
   mode: 'normal'
 ```
   
-Get a token from the Push
+Pair/Repair (Generate a token)
 
 ```yaml
 service: microbot_push.generate_token
