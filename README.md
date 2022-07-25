@@ -20,10 +20,10 @@ Not implemented yet. It might be possible to use the Keymitt app to calibrate bu
 ~~Calibration - set the depth, duration, and switch mode (normal|invert|toggle).~~
 ~~The Push will retain the settings so only needs running once.~~
 
-~~NB. when running this service the MicroBot will push to the given depth to aid in calibration, but not necessarily for the selected duration. The setting is however stored. ~~
+~~NB. when running this service the MicroBot will push to the given depth to aid in calibration, but not necessarily for the selected duration. The setting is however stored.~~
 
 ```yaml
-service: microbot_push.set_params
+service: microbot_push.calibrate
 data:
   depth: 100
   duration: 10
