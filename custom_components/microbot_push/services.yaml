@@ -1,14 +1,8 @@
 generate_token:
   description: Get MicroBot token
 calibrate:
-  description: Calibration - Set mode, depth and press&hold duration. Warning - this will send a push to the device
+  description: Calibration - Set mode, depth and press&hold duration. Warning - this will send a push command to the device
   fields:
-    bdaddr:
-      name: bdaddr
-      description: Bluetooth address
-      required: true
-      selector:
-        text:
     depth:
       name: Depth
       description: Depth (0-100)
