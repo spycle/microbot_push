@@ -15,10 +15,14 @@ class MicroBotBinarySwitch(MicroBotEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs):  # pylint: disable=unused-argument
         """Turn on the switch."""
         await self.coordinator.api.connect()
+        await self.coordinator.api.push()
+        await self.coordinator.api.disconnect()
 
     async def async_turn_off(self, **kwargs):  # pylint: disable=unused-argument
         """Turn off the switch."""
         await self.coordinator.api.connect()
+        await self.coordinator.api.push()
+        await self.coordinator.api.disconnect()
 
     @property
     def name(self):
