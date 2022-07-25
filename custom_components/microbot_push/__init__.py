@@ -63,18 +63,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     @callback
     async def generate_token(call: ServiceCall) -> None:
-#        hass.services.async_register(DOMAIN, 'Generate Token', generate_token)
         _LOGGER.debug("Token service called")
         await coordinator.api.connect(init=True)
 
     @callback
     async def calibrate(call: ServiceCall) -> None:
-#        hass.services.async_register(DOMAIN, 'Calibrate', calibrate)
         _LOGGER.debug("Calibrate service called")
-#        data = call.data.copy()
         depth = call.data["depth"]
         duration = call.data["duration"]
-        _LOGGER.debug(depth)
         mode = call.data["mode"]
         await coordinator.api.connect()
         coordinator.api.setDepth(depth)
@@ -83,8 +79,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         await coordinator.api.calibrate()
         await coordinator.api.disconnect()
 
-    hass.services.async_register(DOMAIN, 'Generate Token', generate_token)
-    hass.services.async_register(DOMAIN, 'Calibrate', calibrate)
+    hass.services.async_register(DOMAIN, 'generate_token', generate_token)
+    hass.services.async_register(DOMAIN, 'calibrate', calibrate)
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     return True
 
