@@ -28,7 +28,7 @@ CONF_BDADDR = "bdaddr"
 DEFAULT_TIMEOUT = 10
 
 # Defaults
-DEFAULT_NAME = "titting_about"
+DEFAULT_NAME = "MicroBotPush"
 
 
 STARTUP_MESSAGE = f"""
