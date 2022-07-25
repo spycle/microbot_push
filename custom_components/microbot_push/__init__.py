@@ -1,108 +1,114 @@
-from __future__ import annotations
+"""
+Custom integration to integrate MicroBot with Home Assistant.
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.const import EVENT_HOMEASSISTANT_START
-import voluptuous as vol
+For more details about this integration, please refer to
+https://github.com/spycle/microbot_push
+"""
+import asyncio
+from datetime import timedelta
 import logging
-import homeassistant.helpers.config_validation as cv
-import configparser
-from configparser import NoSectionError
 import re
 
-from . import microbot
-from .microbot import MicroBotPush
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import Config, HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.core import HomeAssistant, ServiceCall, callback
 
-DOMAIN = "microbot_push"
-_LOGGER = logging.getLogger(__name__)
+from .api import MicroBotApiClient
 
-CONF_BDADDR = "bdaddr"
-DEFAULT_NAME = "MicroBotPush"
+from .const import (
+    CONF_BDADDR,
+    CONF_NAME,
+    DOMAIN,
+    PLATFORMS,
+    STARTUP_MESSAGE,
+)
 
-def setup(hass, config):
+SCAN_INTERVAL = timedelta(minutes=15)
 
-    conf_dir = hass.config.path()
-    
-    def set_params(call):
+_LOGGER: logging.Logger = logging.getLogger(__package__)
 
-        data = call.data.copy()
-        
-        bdaddr = data["bdaddr"]
 
-        conf = conf_dir+"/microbot-"+re.sub('[^a-f0-9]', '', bdaddr.lower())+".conf"
-#        cp = configparser.ConfigParser()
-#        cp.read(conf)
-#        if not cp.has_section('tokens'):
-#            _LOGGER.warning('no token found')
-#            return
-#        else:
-#            raw = cp.options('tokens')
-#            string = raw[0]
-#            string = string.upper()
-#            bdaddr = ':'.join([string[i : i + 2] for i in range(0, len(string), 2)])
-
-        socket_path = conf_dir+"/microbot-"+re.sub('[^a-f0-9]', '', bdaddr.lower())
-
-        data = call.data.copy()
-        
-        depth = data["depth"]
-        duration = data["duration"]
-        mode = data["mode"]
-        
-        mbpp = MicroBotPush(bdaddr, conf, socket_path, newproto=True, is_server=False)
-        mbpp.connect()
-        mbpp.setDepth(depth)
-        mbpp.setDuration(duration)
-        mbpp.setMode(mode)
-#        mbpp.setParams()
-        mbpp.push('setparams')
-        mbpp.disconnect()
-        return
-
-    def start_server(call):
-
-        data = call.data.copy()
-        
-        bdaddr = data["bdaddr"]
-
-        conf = conf_dir+"/microbot-"+re.sub('[^a-f0-9]', '', bdaddr.lower())+".conf"
-
-#        cp = configparser.ConfigParser()
-#        cp.read(conf)
-#        if not cp.has_section('tokens'):
-#            _LOGGER.warning('cannot start server as no token')
-#            return
-#        else:
-#            raw = cp.options('tokens')
-#            string = raw[0]
-#            string = string.upper()
-#            bdaddr = ':'.join([string[i : i + 2] for i in range(0, len(string), 2)])
-
-        socket_path = conf_dir+"/microbot-"+re.sub('[^a-f0-9]', '', bdaddr.lower())
-          
-        mbps = MicroBotPush(bdaddr, conf, socket_path, newproto=True, is_server=True)
-        mbps.runServer()
-        return
-
-    def request_token(call):
-
-        data = call.data.copy()
-        
-        bdaddr = data["bdaddr"]
-
-        conf = conf_dir+"/microbot-"+re.sub('[^a-f0-9]', '', bdaddr.lower())+".conf"
-        
-        mbpt = MicroBotPush(bdaddr, conf, 'socket_path', newproto=True, is_server=False)
-        _LOGGER.info('update token')
-        mbpt.connect(init=True)
-        mbpt.getToken()
-        mbpt.disconnect()
-        return
-
-        _LOGGER.info('called', data["bdaddr"])
-
-    hass.services.register(DOMAIN, 'get_token', request_token)
-    hass.services.register(DOMAIN, 'start_server', start_server)
-    hass.services.register(DOMAIN, 'set_params', set_params)
- 
+async def async_setup(hass: HomeAssistant, config: Config):
+    """Set up this integration using YAML is not supported."""
     return True
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
+    """Set up this integration using UI."""
+    if hass.data.get(DOMAIN) is None:
+        hass.data.setdefault(DOMAIN, {})
+        _LOGGER.info(STARTUP_MESSAGE)
+
+    bdaddr = entry.data.get(CONF_BDADDR)
+    name = entry.data.get(CONF_NAME)
+    conf_dir = hass.config.path()
+    conf = conf_dir+"/.storage/microbot-"+re.sub('[^a-f0-9]', '', bdaddr.lower())+".conf"
+    client = MicroBotApiClient(bdaddr, conf)
+    coordinator = MicroBotDataUpdateCoordinator(hass, client=client)
+#    await coordinator.async_refresh()
+
+#    if not coordinator.last_update_success:
+#        raise ConfigEntryNotReady
+
+    hass.data[DOMAIN][entry.entry_id] = coordinator
+
+    for platform in PLATFORMS:
+#        if entry.options.get(platform, True):
+        coordinator.platforms.append(platform)
+        hass.async_add_job(
+            hass.config_entries.async_forward_entry_setup(entry, platform)
+        )
+
+    @callback
+    async def generate_token(call: ServiceCall) -> None:
+        hass.services.async_register(DOMAIN, 'generate_token', generate_token)
+        await coordinator.api.connect(init=True)
+
+    hass.services.async_register(DOMAIN, 'generate_token', generate_token)
+    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
+    return True
+
+class MicroBotDataUpdateCoordinator(DataUpdateCoordinator):
+    """Class to manage fetching data from the MicroBot."""
+
+    def __init__(
+        self, hass: HomeAssistant, client: MicroBotApiClient
+    ) -> None:
+        """Initialize."""
+        self.api = client
+        self.platforms = []
+
+        super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=SCAN_INTERVAL)
+
+#    async def _async_update_data(self):
+#        """Update data via library."""
+#        try:
+#            return await self.api.async_get_data()
+#        except Exception as exception:
+#            raise UpdateFailed() from exception
+
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Handle removal of an entry."""
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    unloaded = all(
+        await asyncio.gather(
+            *[
+                hass.config_entries.async_forward_entry_unload(entry, platform)
+                for platform in PLATFORMS
+                if platform in coordinator.platforms
+            ]
+        )
+    )
+    if unloaded:
+        hass.data[DOMAIN].pop(entry.entry_id)
+
+    return unloaded
+
+
+async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Reload config entry."""
+    await async_unload_entry(hass, entry)
+    await async_setup_entry(hass, entry)
