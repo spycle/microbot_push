@@ -4,8 +4,11 @@
     "documentation": "https://github.com/spycle/microbot_push",
     "issue_tracker": "https://github.com/spycle/microbot_push/issues",
     "dependencies": [],
-    "codeowners": [],
-    "requirements": ["bluepy==1.3.0"],
+    "config_flow": true,
+    "codeowners": [
+    "@spycle"
+  ],
+    "requirements": [],
     "iot_class": "local_polling",
-    "version": "0.0.4"
+    "version": "2022.7.0"
   }
