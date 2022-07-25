@@ -3,7 +3,7 @@
 NAME = "MicroBot Push"
 DOMAIN = "microbot_push"
 DOMAIN_DATA = f"{DOMAIN}_data"
-VERSION = "2022.7.0"
+VERSION = "2022.7.1"
 ATTRIBUTION = "Data provided by http://jsonplaceholder.typicode.com/"
 ISSUE_URL = "https://github.com/spycle/microbot_push/issues"
 
