@@ -1,22 +1,6 @@
-get_token:
+generate_token:
   description: Get MicroBot token
-  fields:
-    bdaddr:
-      name: bdaddr
-      description: Bluetooth address
-      required: true
-      selector:
-        text:
-start_server:
-  description: Start Server
-  fields:
-    bdaddr:
-      name: bdaddr
-      description: Bluetooth address
-      required: true
-      selector:
-        text:
-set_params:
+calibrate:
   description: Calibration - Set mode, depth and press&hold duration. Warning - this will send a push to the device
   fields:
     bdaddr:
