@@ -1,90 +1,46 @@
-"""Support for MicroBot Push."""
+"""Switch platform for MicroBot."""
+from homeassistant.components.switch import SwitchEntity
 
-from . import microbot
-from .microbot import MicroBotPush
-import voluptuous as vol
-import logging
+from .const import DEFAULT_NAME, DOMAIN, ICON, SWITCH
+from .entity import MicroBotEntity
 
-from homeassistant.components.switch import PLATFORM_SCHEMA, SwitchEntity
-from homeassistant.const import CONF_NAME
-import homeassistant.helpers.config_validation as cv
-import re
+async def async_setup_entry(hass, entry, async_add_devices):
+    """Setup switch platform."""
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    async_add_devices([MicroBotBinarySwitch(coordinator, entry)])
 
-_LOGGER = logging.getLogger(__name__)
+class MicroBotBinarySwitch(MicroBotEntity, SwitchEntity):
+    """MicroBot switch class."""
 
-CONF_BDADDR = "bdaddr"
-DEFAULT_NAME = "MicroBotPush"
+    async def async_turn_on(self, **kwargs):  # pylint: disable=unused-argument
+        """Turn on the switch."""
+        await self.coordinator.api.connect()
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
-    {
-        vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
-        vol.Required(CONF_BDADDR): cv.string,
-    }
-)
-
-
-def setup_platform(hass, config, add_entities, discovery_info=None) -> None:
-    """Perform the setup for MicroBot devices."""
-    name = config.get(CONF_NAME)
-    bdaddr = config.get(CONF_BDADDR)
-    conf_dir = hass.config.path()
-    conf = conf_dir+"/microbot-"+re.sub('[^a-f0-9]', '', bdaddr.lower())+".conf"
-    socket_path = conf_dir+"/microbot-"+re.sub('[^a-f0-9]', '', bdaddr.lower())
-    device = MicroBotPush(bdaddr, conf, socket_path, newproto=True, is_server=False)
-    add_entities([MicroBotPushEntity(bdaddr, name, conf, socket_path, device)], True)
-
-
-class MicroBotPushEntity(SwitchEntity):
-    """Representation of a MicroBot."""
-
-    def __init__(self, bdaddr, name, conf, socket_path, device) -> None:
-        """Initialize the MicroBot."""
-
-        self._device = device
-        self._conf = conf
-        self._socket_path = socket_path
-        self._bdaddr = bdaddr
-        self._name = name
-        self._is_on = False
+    async def async_turn_off(self, **kwargs):  # pylint: disable=unused-argument
+        """Turn off the switch."""
+        await self.coordinator.api.connect()
 
     @property
-    def unique_id(self) -> str:
-        """Return a unique, Home Assistant friendly identifier for this entity."""
-        return self._bdaddr.replace(":", "")
+    def name(self):
+        """Return the name of the switch."""
+        return f"{DEFAULT_NAME}"
+
+    @property
+    def icon(self):
+        """Return the icon of this switch."""
+        return ICON
+
+    @property
+    def is_on(self):
+        """Return true if the switch is on."""
+#        return self.coordinator.data.get("title", "") == "foo"
+#        state = self.coordinator.api.on_state()
+        return
 
     @property
     def available(self) -> bool:
-        """Return True if entity is available."""
         return True
-#        return self._device.available()
-
-    @property
-    def name(self) -> str:
-        """Return the name of the switch."""
-        return self._name
-
-    @property
-    def is_on(self) -> bool:
-        """Return true if it is on."""
-        return self._is_on
 
     @property
     def assumed_state(self) -> bool:
         return False
-
-    def turn_on(self) -> None:
-        """Turn the switch on."""
-
-        self._device.connect()
-        self._device.push('noparams')
-        self._device.disconnect()
-        self._is_on = True
-        return True
-
-    def turn_off(self) -> None:
-        """Turn the switch off."""
-        self._device.connect()
-        self._device.push('noparams')
-        self._device.disconnect()
-        self._is_on = False
-        return True
