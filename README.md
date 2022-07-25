@@ -14,6 +14,8 @@ Before use a one-time token needs to be generated to complete the pairing proces
 
 The token is stored as path-to-config-directory/.storage/microbot-xxxxxxxxxxxx.conf.
 
+Note: The Push is a very sleepy device so it can take up to a minute to respond. I might be able to improve this with some regular polling
+
 ## Services
 
 Not implemented yet. It might be possible to use the Keymitt app to calibrate but settings may be lost on reset?
