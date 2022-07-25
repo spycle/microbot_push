@@ -1,5 +1,5 @@
 generate_token:
-  description: Get MicroBot token
+  description: Pair/Repair (Generate a token)
 calibrate:
   description: Calibration - Set mode, depth and press&hold duration. Warning - this will send a push command to the device
   fields:
