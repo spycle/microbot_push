@@ -42,8 +42,23 @@ class MicroBotApiClient:
         self._mode = 0
 #        self._event = threading.Event()
 
+    async def async_get_data(self):
+        _LOGGER.debug("Refresh data")
+        retry = self._retry
+        while True:
+            try:
+                await BleakScanner.find_device_by_address(self._bdaddr, timeout=10)
+                _LOGGER.debug("Found device %s", self._bdaddr)
+                break
+            except Exception as e:
+                if retry == 0:
+                    _LOGGER.error(f"A device with address {self._bdaddr} could not be found. %s", e) 
+                    break  
+                retry = retry - 1
+                _LOGGER.debug("Retrying find device")
+                sleep(1) 
+
     async def notification_handler(self, handle: int, data: bytes) -> None:
-        _LOGGER.debug(f'Received response at {handle=}: {hexlify(data, ":")!r}')
         tmp = binascii.b2a_hex(data)[4:4+36]
         if b'0f0101' == tmp[:6] or b'0f0102' == tmp[:6]:
             bdaddr = tmp[6:6+12]
@@ -56,12 +71,13 @@ class MicroBotApiClient:
             _LOGGER.debug("ack with token")
             await self._client.stop_notify(CHR2A89)
             self.__storeToken()
-
-        # Anything else is unexpected for now.
         else:
-            _LOGGER.debug("Unexpected response")
+            _LOGGER.debug(f'Received response at {handle=}: {hexlify(data, ":")!r}')
 
-    async def is_connected(self, timeout=None):
+    async def notification_handler2(self, handle: int, data: bytes) -> None:
+        _LOGGER.debug(f'Received response at {handle=}: {hexlify(data, ":")!r}')
+
+    async def is_connected(self, timeout=10):
         try:
             return await asyncio.wait_for(
                 self._client.is_connected(),
@@ -75,8 +91,12 @@ class MicroBotApiClient:
             False
 
     async def _do_connect(self, timeout=10):
-        await self._client.connect()
-        _LOGGER.debug("Connected!")
+        x = await self.is_connected()
+        if x == True:
+            _LOGGER.debug("Already connected")
+        else:
+            await self._client.connect()
+            _LOGGER.debug("Connected!")
 
     async def _do_disconnect(self):
         if self.is_connected():
@@ -87,32 +107,13 @@ class MicroBotApiClient:
 
     async def connect(self, init=False):
         """MicroBot is very sleepy. This helps keep it in context"""
-        task_1 = asyncio.create_task(self.discover())    
-        task_2 = asyncio.create_task(self._connect(init))  
+        task_1 = asyncio.create_task(self.discover())
+        task_2 = asyncio.create_task(self._connect(init))
         _LOGGER.debug("Scanning for 60s")
         scan = await task_1
-        con = await task_2  
+        con = await task_2
 
     async def _connect(self, init, timeout=10):
-#        if self.is_connected():
-#            return
-        _LOGGER.debug("Finding device")
-        retry = self._retry
-        while True:
-            try:
-                self._device = await BleakScanner.find_device_by_address(self._bdaddr, timeout=10)
-                if not self._device:
-                    raise BleakError(f"A device with address {self._bdaddr} could not be found.")
-                else:
-                    _LOGGER.debug("Found device %s", self._bdaddr)
-                    break
-            except Exception as e:
-                if retry == 0:
-                    _LOGGER.error("error: %s", e) 
-                    break  
-                retry = retry - 1
-                _LOGGER.debug("Retrying find device")
-                sleep(1) 
         retry = self._retry
         while True:
             _LOGGER.debug("Connecting to %s", self._bdaddr)  
@@ -128,17 +129,10 @@ class MicroBotApiClient:
                 retry = retry - 1
                 _LOGGER.debug("Retrying connect")
                 sleep(1)
-        try:
-            _LOGGER.debug("Attempting to pair") 
-            await self._client.pair()
-            _LOGGER.debug("Paired")
-        except Exception as e:
-            _LOGGER.error("Pair failed %s", e)
         await self.__setToken(init)              
 
     async def services(self, timeout=10):
         _LOGGER.debug("looking for services")
-#        async with BleakClient(self._bdaddr) as client:
         for service in self._client.services:
             _LOGGER.debug(f"[Service] {service}")
             for char in service.characteristics:
@@ -176,26 +170,6 @@ class MicroBotApiClient:
                 self._default_timeout if timeout is None else timeout)
         except Exception as e:
             _LOGGER.error("error: %s", e)
-
-    async def async_get_data(self) -> dict:
-        """Get data from the MicroBot."""
-        _LOGGER.debug("Refresh")
-        retry = self._retry
-        while True:
-            try:
-                self._device = await BleakScanner.find_device_by_address(self._bdaddr, timeout=60)
-                if not self._device:
-                    raise BleakError(f"A device with address {self._bdaddr} could not be found.")
-                else:
-                    _LOGGER.debug("Found device %s", self._bdaddr)
-                    break
-            except Exception as e:
-                if retry == 0:
-                    _LOGGER.error("error: %s", e) 
-                    break  
-                retry = retry - 1
-                _LOGGER.debug("Retrying find device")
-                sleep(1) 
 
     def __loadToken(self):
         _LOGGER.debug("Looking for token")
@@ -294,25 +268,21 @@ class MicroBotApiClient:
 
     async def push(self):
         _LOGGER.debug("Attempting to push")
-        retry = self._retry
-        while True:
-            try:
-                id = self.__randomid(16)
-                hex1 = binascii.a2b_hex(id+"000100000008020000000a0000000000decd")
-                bar1 = list(hex1)
-                hex2 = binascii.a2b_hex(id+"0fffffffffff000000000000000000000000")
-                bar2 = list(hex2)
-                await self._client.write_gatt_char(CHR2A89, bytearray(bar1), response=True)
-                await self._client.write_gatt_char(CHR2A89, bytearray(bar2), response=True)
-                _LOGGER.debug("Pushed")
-                break
-            except Exception as e:
-                if retry == 0:
-                    _LOGGER.error("failed to push: %s", e)
-                    break
-                retry = retry - 1
-                _LOGGER.debug("Retrying push")
-                sleep(1)
+        x = await self.is_connected()
+        if x == False:
+            _LOGGER.debug("Lost connection...reconnecting")
+            await self._connect(init=False)
+        try:
+            id = self.__randomid(16)
+            hex1 = binascii.a2b_hex(id+"000100000008020000000a0000000000decd")
+            bar1 = list(hex1)
+            hex2 = binascii.a2b_hex(id+"0fffffffffff000000000000000000000000")
+            bar2 = list(hex2)
+            await self._client.write_gatt_char(CHR2A89, bytearray(bar1), response=True)
+            await self._client.write_gatt_char(CHR2A89, bytearray(bar2), response=True)
+            _LOGGER.debug("Pushed")
+        except Exception as e:
+            _LOGGER.error("failed to push: %s", e)
 
     async def calibrate(self):
         _LOGGER.debug("Setting calibration")
