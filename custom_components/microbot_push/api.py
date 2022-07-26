@@ -9,7 +9,6 @@ from bleak import BleakScanner
 from bleak import discover
 from bleak import BleakError
 from .const import DEFAULT_TIMEOUT
-from time import sleep
 import random, string
 import configparser
 from configparser import NoSectionError
@@ -56,7 +55,7 @@ class MicroBotApiClient:
                     break  
                 retry = retry - 1
                 _LOGGER.debug("Retrying find device")
-                sleep(1) 
+                await asyncio.sleep(1) 
 
     async def notification_handler(self, handle: int, data: bytes) -> None:
         tmp = binascii.b2a_hex(data)[4:4+36]
@@ -128,7 +127,7 @@ class MicroBotApiClient:
                     break
                 retry = retry - 1
                 _LOGGER.debug("Retrying connect")
-                sleep(1)
+                await asyncio.sleep(1)
         await self.__setToken(init)              
 
     async def services(self, timeout=10):
@@ -286,37 +285,33 @@ class MicroBotApiClient:
 
     async def calibrate(self):
         _LOGGER.debug("Setting calibration")
-        retry = self._retry
-        while True:
-            try:
-                id = self.__randomid(16) 
-                hex1 = binascii.a2b_hex(id+"000100000008030001000a0000000000decd")
-                bar1 = list(hex1)
-                hex2 = binascii.a2b_hex(id+"0fff"+'{:02x}'.format(self._mode)+"000000"+"000000000000000000000000")
-                bar2 = list(hex2)
-                hex3 = binascii.a2b_hex(id+"000100000008040001000a0000000000decd")
-                bar3 = list(hex3)
-                hex4 = binascii.a2b_hex(id+"0fff"+'{:02x}'.format(self._depth)+"000000"+"000000000000000000000000")
-                bar4 = list(hex4)
-                hex5 = binascii.a2b_hex(id+"000100000008050001000a0000000000decd")
-                bar5 = list(hex5)
-                hex6 = binascii.a2b_hex(id+"0fff"+self._duration.to_bytes(4,"little").hex()+"000000000000000000000000")
-                bar6 = list(hex6)
-                await self._client.write_gatt_char(CHR2A89, bytearray(bar1), response=True)
-                await self._client.write_gatt_char(CHR2A89, bytearray(bar2), response=True)
-                await self._client.write_gatt_char(CHR2A89, bytearray(bar3), response=True)
-                await self._client.write_gatt_char(CHR2A89, bytearray(bar4), response=True)
-                await self._client.write_gatt_char(CHR2A89, bytearray(bar5), response=True)
-                await self._client.write_gatt_char(CHR2A89, bytearray(bar6), response=True)
-                _LOGGER.debug("Calibration set")
-                break
-            except Exception as e:
-                if retry == 0:
-                    _LOGGER.error("Failed to calibrate: %s", e)
-                    break
-                retry = retry - 1
-                _LOGGER.debug("Retrying calibration")
-                sleep(1)
+        x = await self.is_connected()
+        if x == False:
+            _LOGGER.debug("Lost connection...reconnecting")
+            await self._connect(init=False)
+        try:
+            id = self.__randomid(16) 
+            hex1 = binascii.a2b_hex(id+"000100000008030001000a0000000000decd")
+            bar1 = list(hex1)
+            hex2 = binascii.a2b_hex(id+"0fff"+'{:02x}'.format(self._mode)+"000000"+"000000000000000000000000")
+            bar2 = list(hex2)
+            hex3 = binascii.a2b_hex(id+"000100000008040001000a0000000000decd")
+            bar3 = list(hex3)
+            hex4 = binascii.a2b_hex(id+"0fff"+'{:02x}'.format(self._depth)+"000000"+"000000000000000000000000")
+            bar4 = list(hex4)
+            hex5 = binascii.a2b_hex(id+"000100000008050001000a0000000000decd")
+            bar5 = list(hex5)
+            hex6 = binascii.a2b_hex(id+"0fff"+self._duration.to_bytes(4,"little").hex()+"000000000000000000000000")
+            bar6 = list(hex6)
+            await self._client.write_gatt_char(CHR2A89, bytearray(bar1), response=True)
+            await self._client.write_gatt_char(CHR2A89, bytearray(bar2), response=True)
+            await self._client.write_gatt_char(CHR2A89, bytearray(bar3), response=True)
+            await self._client.write_gatt_char(CHR2A89, bytearray(bar4), response=True)
+            await self._client.write_gatt_char(CHR2A89, bytearray(bar5), response=True)
+            await self._client.write_gatt_char(CHR2A89, bytearray(bar6), response=True)
+            _LOGGER.debug("Calibration set")
+        except Exception as e:
+            _LOGGER.error("Failed to calibrate: %s", e)
 
     def __randomstr(self, n):
        randstr = [random.choice(string.printable) for i in range(n)]
