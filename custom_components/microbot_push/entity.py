@@ -7,7 +7,7 @@ class MicroBotEntity(CoordinatorEntity):
     def __init__(self, coordinator, config_entry):
         super().__init__(coordinator)
         self.config_entry = config_entry
-
+        
     @property
     def unique_id(self):
         """Return a unique ID to use for this entity."""
@@ -22,11 +22,11 @@ class MicroBotEntity(CoordinatorEntity):
             "manufacturer": "Keymitt/Naran",
         }
 
-    @property
-    def extra_state_attributes(self):
-        """Return the state attributes."""
-        return {
-            "attribution": ATTRIBUTION,
+#    @property
+#    def extra_state_attributes(self):
+#        """Return the state attributes."""
+#        return {
+#            "name": self.config_entry.data[CONF_NAME],
 #            "id": str(self.coordinator.data.get("id")),
-            "integration": DOMAIN,
-        }
+#            "integration": DOMAIN,
+#        }
