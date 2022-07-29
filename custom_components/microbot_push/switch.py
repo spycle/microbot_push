@@ -15,14 +15,16 @@ class MicroBotBinarySwitch(MicroBotEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs):  # pylint: disable=unused-argument
         """Turn on the switch."""
         await self.coordinator.api.connect()
-        await self.coordinator.api.push()
+        await self.coordinator.api.push_on()
         await self.coordinator.api.disconnect()
-
+        self.async_write_ha_state()
+        
     async def async_turn_off(self, **kwargs):  # pylint: disable=unused-argument
         """Turn off the switch."""
         await self.coordinator.api.connect()
-        await self.coordinator.api.push()
+        await self.coordinator.api.push_off()
         await self.coordinator.api.disconnect()
+        self.async_write_ha_state()
 
     @property
     def name(self):
@@ -37,9 +39,7 @@ class MicroBotBinarySwitch(MicroBotEntity, SwitchEntity):
     @property
     def is_on(self):
         """Return true if the switch is on."""
-#        return self.coordinator.data.get("title", "") == "foo"
-#        state = self.coordinator.api.on_state()
-        return
+        return self.coordinator.api.is_on
 
     @property
     def available(self) -> bool:
@@ -47,4 +47,8 @@ class MicroBotBinarySwitch(MicroBotEntity, SwitchEntity):
 
     @property
     def assumed_state(self) -> bool:
+        return False
+
+    @property
+    def should_poll(self) -> bool:
         return False
