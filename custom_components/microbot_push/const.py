@@ -25,10 +25,10 @@ CONF_ENABLED = "enabled"
 CONF_NAME = "name"
 CONF_PASSWORD = "password"
 CONF_BDADDR = "bdaddr"
-DEFAULT_TIMEOUT = 10
+DEFAULT_TIMEOUT = 20
 
 # Defaults
-DEFAULT_NAME = "MicroBotPush"
+DEFAULT_NAME = "Microbot"
 
 
 STARTUP_MESSAGE = f"""
