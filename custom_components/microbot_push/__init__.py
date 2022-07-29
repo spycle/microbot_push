@@ -26,8 +26,6 @@ from .const import (
     STARTUP_MESSAGE,
 )
 
-SCAN_INTERVAL = timedelta(minutes=10)
-
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
 
@@ -89,15 +87,7 @@ class MicroBotDataUpdateCoordinator(DataUpdateCoordinator):
         self.api = client
         self.platforms = []
 
-        super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=SCAN_INTERVAL)
-
-    async def _async_update_data(self):
-        """Update data via library."""
-        try:
-            return await self.api.async_get_data()
-        except Exception as exception:
-            raise UpdateFailed() from exception
-
+        super().__init__(hass, _LOGGER, name=DOMAIN)
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Handle removal of an entry."""
