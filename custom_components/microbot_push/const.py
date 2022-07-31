@@ -1,9 +1,9 @@
-"""Constants for integration_blueprint."""
+"""Constants for Microbot."""
 # Base component constants
 NAME = "MicroBot Push"
 DOMAIN = "microbot_push"
 DOMAIN_DATA = f"{DOMAIN}_data"
-VERSION = "2022.7.3"
+VERSION = "2022.7.4"
 ATTRIBUTION = "Data provided by http://jsonplaceholder.typicode.com/"
 ISSUE_URL = "https://github.com/spycle/microbot_push/issues"
 
@@ -25,7 +25,6 @@ CONF_ENABLED = "enabled"
 CONF_NAME = "name"
 CONF_PASSWORD = "password"
 CONF_BDADDR = "bdaddr"
-DEFAULT_TIMEOUT = 20
 
 # Defaults
 DEFAULT_NAME = "Microbot"
