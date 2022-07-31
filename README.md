@@ -12,8 +12,6 @@ Before first use, a one-time token needs to be generated to complete the pairing
 
 The token is stored as path-to-config-directory/.storage/microbot-xxxxxxxxxxxx.conf.
 
-Note: The Push is a very sleepy device so it can take up to a minute to respond.
-
 ## Services
 
 Calibration - set the depth, duration, and switch mode (normal|invert|toggle).
