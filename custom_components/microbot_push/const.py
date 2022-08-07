@@ -3,8 +3,8 @@
 NAME = "MicroBot Push"
 DOMAIN = "microbot_push"
 DOMAIN_DATA = f"{DOMAIN}_data"
-VERSION = "2022.7.4"
-ATTRIBUTION = "Data provided by http://jsonplaceholder.typicode.com/"
+VERSION = "2022.7.6"
+MANUFACTURER = "Naran/Keymitt"
 ISSUE_URL = "https://github.com/spycle/microbot_push/issues"
 
 # Icons
@@ -25,6 +25,8 @@ CONF_ENABLED = "enabled"
 CONF_NAME = "name"
 CONF_PASSWORD = "password"
 CONF_BDADDR = "bdaddr"
+CONF_RETRY_COUNT = "retry_count"
+DEFAULT_RETRY_COUNT = 5
 
 # Defaults
 DEFAULT_NAME = "Microbot"
