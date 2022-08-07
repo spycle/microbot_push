@@ -1,76 +1,97 @@
 """MicroBot Client."""
+from __future__ import annotations
 import logging
 import asyncio
 from typing import Optional
 from typing import Any
+import struct
 import async_timeout
 import bleak
-from bleak import BleakClient
 from bleak import BleakScanner
 from bleak import discover
 from bleak import BleakError
+from bleak_retry_connector import BleakClient, establish_connection
 from bleak.backends.device import BLEDevice
 from bleak.backends.scanner import AdvertisementData
+from dataclasses import dataclass
 import random, string
 import configparser
 from configparser import NoSectionError
 import os
 from os.path import expanduser
 import binascii
-from binascii import hexlify
+from binascii import hexlify, unhexlify
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 CONNECT_LOCK = asyncio.Lock()
 DEFAULT_TIMEOUT = 20
-DEFAULT_RETRY_COUNT = 10
+DEFAULT_RETRY_COUNT = 5
 DEFAULT_SCAN_TIMEOUT = 30
 
 SVC1831 = '00001831-0000-1000-8000-00805f9b34fb'
 CHR2A89 = '00002a89-0000-1000-8000-00805f9b34fb'
 
-class MicroBotApiClient:
+@dataclass
+class MicroBotAdvertisement:
+    """MicroBot avertisement."""
 
-    def __init__(
-        self, bdaddr: str, config: str
+    address: str
+    data: dict[str, Any]
+    device: BLEDevice
+
+def parse_advertisement_data(
+    device: BLEDevice, advertisement_data: AdvertisementData
+) -> MicroBotAdvertisement | None:
+    """Parse advertisement data."""
+    services = advertisement_data.service_uuids
+    if not services:
+        return
+    if SVC1831 not in services:
+        return
+    else:
+        _LOGGER.debug("Updating MicroBot data")
+        data = {
+            "address": device.address, # MacOS uses UUIDs
+            "local_name": advertisement_data.local_name,
+            "rssi": device.rssi,
+            "svc": advertisement_data.service_uuids[4],
+            "manufacturer_data_1280": advertisement_data.manufacturer_data.get(1280),
+            "manufacturer_data_76": advertisement_data.manufacturer_data.get(76),
+            }
+
+    return MicroBotAdvertisement(device.address, data, device)
+
+class GetMicroBotDevices:
+    """Scan for all MicroBot devices and return"""
+
+    def __init__(self) -> None:
+        """Get MicroBot devices class constructor."""
+        self._adv_data: dict[str, MicroBotAdvertisement] = {}
+
+    def detection_callback(
+        self,
+        device: BLEDevice,
+        advertisement_data: AdvertisementData,
     ) -> None:
-        """MicroBot Client."""
-        self._bdaddr = bdaddr
-        self._client = None
-        if self._client == None:
-            self.discover()
-        self._scanner = BleakScanner()
-        self._scanner.register_detection_callback(self.detection_callback)
-        self._default_timeout = DEFAULT_TIMEOUT
-        self._retry = 10
-        self._token = None
-        self._config = expanduser(config)
-        self.__loadToken()
-        self._depth = 50
-        self._duration = 0
-        self._mode = 0
-        self._is_on = None
-
-    @property
-    def is_on(self):
-        return self._is_on
-
-    async def detection_callback(
-            self,
-            device: BLEDevice,
-            advertisement_data: AdvertisementData,
-        ) -> None:
-            if device.address == self._bdaddr:
-                self._client = BleakClient(device, timeout=20)
-                _LOGGER.debug("MicroBot object: %s", self._client)
-                await self._scanner.stop()
+        discovery = parse_advertisement_data(device, advertisement_data)
+        if discovery:
+            self._adv_data[discovery.address] = discovery
 
     async def discover(
         self, retry: int = DEFAULT_RETRY_COUNT, scan_timeout: int = DEFAULT_SCAN_TIMEOUT
-    ) -> None:
-        """Find switchbot device"""
+    ) -> dict:
+        """Find switchbot devices and their advertisement data."""
+
         _LOGGER.debug("Running discovery")
-        await self._scanner.start()
-        await asyncio.sleep(scan_timeout)
+        devices = None
+        devices = BleakScanner()
+        devices.register_detection_callback(self.detection_callback)
+
+        async with CONNECT_LOCK:
+            await devices.start()
+            await asyncio.sleep(scan_timeout)
+            await devices.stop()
+
         _LOGGER.debug("Stopped discovery")
 
         if devices is None:
@@ -86,6 +107,73 @@ class MicroBotApiClient:
             )
             await asyncio.sleep(DEFAULT_RETRY_TIMEOUT)
             return await self.discover(retry - 1, scan_timeout)
+
+        return self._adv_data
+
+    async def _get_devices(
+        self
+    ) -> dict:
+        """Get microbot devices."""
+        if not self._adv_data:
+            await self.discover()
+
+        return {
+            address: adv
+            for address, adv in self._adv_data.items()
+        }
+
+    async def get_bots(self) -> dict[str, MicroBotAdvertisement]:
+        """Return all MicroBot devices with services data."""
+        return await self._get_devices()
+
+    async def get_device_data(
+        self, address: str
+    ) -> dict[str, MicroBotAdvertisement] | None:
+        """Return data for specific device."""
+        if not self._adv_data:
+            await self.discover()
+
+        _microbot_data = {
+            device: data
+            for device, data in self._adv_data.items()
+            # MacOS uses UUIDs instead of MAC addresses
+            if data.get("address") == address
+        }
+
+        return _microbot_data
+
+class MicroBotApiClient:
+
+    def __init__(
+        self, 
+        device: BLEDevice,
+        config: str,
+        **kwargs: Any,
+    ) -> None:
+        """MicroBot Client."""
+        self._device = device
+        self._client: BleakClient | None = None
+        self._sb_adv_data: MicroBotAdvertisement | None = None
+        self._bdaddr = device.address
+        self._default_timeout = DEFAULT_TIMEOUT
+#        self._retry = 10
+        self._retry: int = kwargs.pop("retry_count", DEFAULT_RETRY_COUNT)
+        self._token = None
+        self._config = expanduser(config)
+        self.__loadToken()
+        self._depth = 50
+        self._duration = 0
+        self._mode = 0
+        self._is_on = None
+
+    @property
+    def is_on(self):
+        return self._is_on
+
+    @property
+    def name(self) -> str:
+        """Return device name."""
+        return f"{self._device.name} ({self._device.address})"
 
     async def notification_handler(self, handle: int, data: bytes) -> None:
         tmp = binascii.b2a_hex(data)[4:4+36]
@@ -104,20 +192,20 @@ class MicroBotApiClient:
             _LOGGER.debug(f'Received response at {handle=}: {hexlify(data, ":")!r}')
 
     async def notification_handler2(self, handle: int, data: bytes) -> None:
-        _LOGGER.debug(f'Received response at {handle=}: {hexlify(data, ":")!r}')
+        _LOGGER.debug(f'Received response at {handle=}: {hexlify(data).decode()}')
 
     async def is_connected(self, timeout=20):
+        if not self._client:
+            return False
         try:
             return await asyncio.wait_for(
                 self._client.is_connected(),
                 self._default_timeout if timeout is None else timeout)
-            return True
         except asyncio.TimeoutError:
             return False
         except Exception as e:
             _LOGGER.error(e)
-        else:
-            False
+            return False
 
     async def _do_connect(self, timeout=20):
         x = await self.is_connected()
@@ -125,11 +213,18 @@ class MicroBotApiClient:
             _LOGGER.debug("Already connected")
         else:
             async with CONNECT_LOCK:
-                await self._client.connect(timeout=20)
-            _LOGGER.debug("Connected!")
+                try:
+                    self._client = await establish_connection(
+                        BleakClient, self._device, self.name, max_attempts=self._retry
+                    )
+                    _LOGGER.debug("Connected!")
+                    await self._client.start_notify(CHR2A89, self.notification_handler2)
+                except Exception as e:
+                    _LOGGER.error(e)
 
     async def _do_disconnect(self):
         if self.is_connected():
+            await self._client.stop_notify(CHR2A89)
             await self._client.disconnect()
 
     async def connect(self, init=False, timeout=20):
@@ -192,10 +287,8 @@ class MicroBotApiClient:
         _LOGGER.debug("Generating token")
         try:
             id = self.__randomid(16)
-            hex1 = binascii.a2b_hex(id+"00010040e20100fa01000700000000000000")
-            bar1 = list(hex1)
-            hex2 = binascii.a2b_hex(id+"0fffffffffffffffffffffffffff"+self.__randomid(32))
-            bar2 = list(hex2)
+            bar1 = list(binascii.a2b_hex(id+"00010040e20100fa01000700000000000000"))
+            bar2 = list(binascii.a2b_hex(id+"0fffffffffffffffffffffffffff"+self.__randomid(32)))
             _LOGGER.debug("Waiting for bdaddr notification")
             await self._client.start_notify(CHR2A89, self.notification_handler)
             await self._client.write_gatt_char(CHR2A89, bytearray(bar1), response=True)
@@ -212,10 +305,8 @@ class MicroBotApiClient:
                 _LOGGER.debug("Setting token")
                 try:
                     id = self.__randomid(16)
-                    hex1 = binascii.a2b_hex(id+"00010000000000fa0000070000000000decd")
-                    bar1 = list(hex1)
-                    hex2 = binascii.a2b_hex(id+"0fff"+self._token)
-                    bar2 = list(hex2)
+                    bar1 = list(binascii.a2b_hex(id+"00010000000000fa0000070000000000decd"))
+                    bar2 = list(binascii.a2b_hex(id+"0fff"+self._token))
                     await self._client.write_gatt_char(CHR2A89, bytearray(bar1), response=True)
                     await self._client.write_gatt_char(CHR2A89, bytearray(bar2), response=True)
                     _LOGGER.debug("Token set")
@@ -226,11 +317,8 @@ class MicroBotApiClient:
         _LOGGER.debug("Getting token")
         try:
             id = self.__randomid(16)
-            hex1 = binascii.a2b_hex(id+"00010040e20101fa01000000000000000000")
-            bar1 = list(hex1)
-            _LOGGER.debug(bar1)
-            hex2 = binascii.a2b_hex(id+"0fffffffffffffffffff0000000000000000")
-            bar2 = list(hex2)
+            bar1 = list(binascii.a2b_hex(id+"00010040e20101fa01000000000000000000"))
+            bar2 = list(binascii.a2b_hex(id+"0fffffffffffffffffff0000000000000000"))
             await self._client.write_gatt_char(CHR2A89, bytearray(bar1), response=True)
             await self._client.write_gatt_char(CHR2A89, bytearray(bar2), response=True)
             _LOGGER.warning('touch the button to get a token')
@@ -262,10 +350,8 @@ class MicroBotApiClient:
             await self.connect(init=False)
         try:
             id = self.__randomid(16)
-            hex1 = binascii.a2b_hex(id+"000100000008020000000a0000000000decd")
-            bar1 = list(hex1)
-            hex2 = binascii.a2b_hex(id+"0fffffffffff000000000000000000000000")
-            bar2 = list(hex2)
+            bar1 = list(binascii.a2b_hex(id+"000100000008020000000a0000000000decd"))
+            bar2 = list(binascii.a2b_hex(id+"0fffffffffff000000000000000000000000"))
             await self._client.write_gatt_char(CHR2A89, bytearray(bar1), response=True)
             await self._client.write_gatt_char(CHR2A89, bytearray(bar2), response=True)
             _LOGGER.debug("Pushed")
@@ -282,10 +368,8 @@ class MicroBotApiClient:
             await self.connect(init=False)
         try:
             id = self.__randomid(16)
-            hex1 = binascii.a2b_hex(id+"000100000008020000000a0000000000decd")
-            bar1 = list(hex1)
-            hex2 = binascii.a2b_hex(id+"0fffffffffff000000000000000000000000")
-            bar2 = list(hex2)
+            bar1 = list(binascii.a2b_hex(id+"000100000008020000000a0000000000decd"))
+            bar2 = list(binascii.a2b_hex(id+"0fffffffffff000000000000000000000000"))
             await self._client.write_gatt_char(CHR2A89, bytearray(bar1), response=True)
             await self._client.write_gatt_char(CHR2A89, bytearray(bar2), response=True)
             _LOGGER.debug("Pushed")
@@ -302,18 +386,12 @@ class MicroBotApiClient:
             await self._connect(init=False)
         try:
             id = self.__randomid(16) 
-            hex1 = binascii.a2b_hex(id+"000100000008030001000a0000000000decd")
-            bar1 = list(hex1)
-            hex2 = binascii.a2b_hex(id+"0fff"+'{:02x}'.format(self._mode)+"000000"+"000000000000000000000000")
-            bar2 = list(hex2)
-            hex3 = binascii.a2b_hex(id+"000100000008040001000a0000000000decd")
-            bar3 = list(hex3)
-            hex4 = binascii.a2b_hex(id+"0fff"+'{:02x}'.format(self._depth)+"000000"+"000000000000000000000000")
-            bar4 = list(hex4)
-            hex5 = binascii.a2b_hex(id+"000100000008050001000a0000000000decd")
-            bar5 = list(hex5)
-            hex6 = binascii.a2b_hex(id+"0fff"+self._duration.to_bytes(4,"little").hex()+"000000000000000000000000")
-            bar6 = list(hex6)
+            bar1 = list(binascii.a2b_hex(id+"000100000008030001000a0000000000decd"))
+            bar2 = list(binascii.a2b_hex(id+"0fff"+'{:02x}'.format(self._mode)+"000000"+"000000000000000000000000"))
+            bar3 = list(binascii.a2b_hex(id+"000100000008040001000a0000000000decd"))
+            bar4 = list(binascii.a2b_hex(id+"0fff"+'{:02x}'.format(self._depth)+"000000"+"000000000000000000000000"))
+            bar5 = list(binascii.a2b_hex(id+"000100000008050001000a0000000000decd"))
+            bar6 = list(binascii.a2b_hex(id+"0fff"+self._duration.to_bytes(4,"little").hex()+"000000000000000000000000"))
             await self._client.write_gatt_char(CHR2A89, bytearray(bar1), response=True)
             await self._client.write_gatt_char(CHR2A89, bytearray(bar2), response=True)
             await self._client.write_gatt_char(CHR2A89, bytearray(bar3), response=True)
@@ -323,6 +401,11 @@ class MicroBotApiClient:
             _LOGGER.debug("Calibration set")
         except Exception as e:
             _LOGGER.error("Failed to calibrate: %s", e)
+
+    def update_from_advertisement(self, advertisement: MicroBotAdvertisement) -> None:
+        """Update device data from advertisement."""
+        self._sb_adv_data = advertisement
+        self._device = advertisement.device
 
     def __randomstr(self, n):
        randstr = [random.choice(string.printable) for i in range(n)]
