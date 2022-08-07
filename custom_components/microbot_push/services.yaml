@@ -1,6 +1,8 @@
 generate_token:
+  name: Pair/Repair
   description: Pair/Repair (Generate a token)
 calibrate:
+  name: Calibrate
   description: Calibration - Set mode, depth and press&hold duration. Warning - this will send a push command to the device
   fields:
     depth:
