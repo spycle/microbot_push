@@ -9,6 +9,9 @@
       "service_uuid": "00001831-0000-1000-8000-00805f9b34fb"
     },
     {
+      "service_data_uuid": "00001831-0000-1000-8000-00805f9b34fb"
+    },
+    {
       "local_name": "mib*"
     }
   ],
@@ -16,8 +19,8 @@
     "@spycle"
   ],
     "requirements": [],
-    "iot_class": "local_polling",
+    "iot_class": "assumed_state",
     "dependencies": ["bluetooth"],
-    "version": "2022.7.5",
+    "version": "2022.7.6",
     "loggers": ["microbot_push"]
 }
