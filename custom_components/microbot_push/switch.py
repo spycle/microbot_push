@@ -1,6 +1,6 @@
 """Switch platform for MicroBot."""
 from homeassistant.components.switch import SwitchEntity
-
+from homeassistant.helpers.restore_state import RestoreEntity
 from .const import DEFAULT_NAME, DOMAIN, ICON, SWITCH
 from .entity import MicroBotEntity
 
@@ -9,7 +9,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
     coordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_devices([MicroBotBinarySwitch(coordinator, entry)])
 
-class MicroBotBinarySwitch(MicroBotEntity, SwitchEntity):
+class MicroBotBinarySwitch(MicroBotEntity, SwitchEntity, RestoreEntity):
     """MicroBot switch class."""
 
     async def async_turn_on(self, **kwargs):  # pylint: disable=unused-argument
@@ -49,6 +49,3 @@ class MicroBotBinarySwitch(MicroBotEntity, SwitchEntity):
     def assumed_state(self) -> bool:
         return False
 
-    @property
-    def should_poll(self) -> bool:
-        return False
