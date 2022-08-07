@@ -3,7 +3,7 @@
 NAME = "MicroBot Push"
 DOMAIN = "microbot_push"
 DOMAIN_DATA = f"{DOMAIN}_data"
-VERSION = "2022.7.6"
+VERSION = "2022.08.0"
 MANUFACTURER = "Naran/Keymitt"
 ISSUE_URL = "https://github.com/spycle/microbot_push/issues"
 
