@@ -21,6 +21,6 @@
     "requirements": [],
     "iot_class": "assumed_state",
     "dependencies": ["bluetooth"],
-    "version": "2022.7.6",
+    "version": "2022.08.0",
     "loggers": ["microbot_push"]
 }
