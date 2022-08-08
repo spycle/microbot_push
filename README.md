@@ -5,14 +5,9 @@ The MicroBot Push integration allows you to control the [MicroBot Push](https://
 
 In order to use this integration, it is required to have working Bluetooth set up on the device running Home Assistant. A [MicroBot Hub](https://www.keymitt.com/products/microbot-hub) is not required for this integration.
 
-If you have multiple devices of the same type, you need to get the BTLE MAC address of your device to tell your devices apart. You can find the address for your device using the following steps:
+If you have multiple MicroBots, you need to know the BTLE MAC address of your device to tell them apart. If the MicroBot is currently paired to the Keymitt or MicroBot app and has not been renamed, the first 4 characters of the BTLE MAC address will be referenced. For example mibp(d206)
 
-1. Open the Keymitt app.
-2. Add New Devices -> Push -> OK.
-3. In the Scanning screen the BTLE MAC will be shown as a string of 12 characters.
-4. Write down the BTLE MAC address of your device.
-
-Please note, device names configured in the MicroBot app are not transferred into Home Assistant.
+Please note, devices cannot remain paired to either app for this integration to function. They will be paired to Home Assistant exclusively.
     
 Before installation the MicroBot Push will need to be in pairing mode. To reset; turn it off and on, wait for the LED to blink red, immediately press and hold the button for about 5 seconds until the LED starts blinking red rapidly, and let go. The LED should now be blinking blue indicating pairing mode.
 
