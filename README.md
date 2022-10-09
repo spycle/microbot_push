@@ -1,3 +1,5 @@
+# *This integration is now availiable in core Home Assistant. This repository will no longer be maintained*
+
 # MicroBot Push
 The MicroBot Push integration allows you to control the [MicroBot Push](https://www.keymitt.com/products/microbot-push).
 
